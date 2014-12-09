@@ -62,12 +62,12 @@ public class Airport : Form
         p10 = new ButtonPanelThread(new Point(0, 10), 100, true, pnl10, Color.Green,  3, semaphore10, semaphore8, buffer10, buffer8, btn4);
 
         //Wait Panel Declarations
-        p4 = new WaitPanelThread(new Point(0, 10),   100, true, pnl4, Color.White, 4, semaphore4, semaphore5, semaphore2, buffer4, buffer5, buffer2);
-        p5 = new WaitPanelThread(new Point(0, 10),   100, true, pnl5, Color.White, 4, semaphore5, semaphore6, semaphore3, buffer5, buffer6, buffer3);
+        p4 = new WaitPanelThread(new Point(0, 10),   100, true, pnl4, Color.White, 4, semaphore4, semaphore5, buffer4, buffer5, buffer2);
+        p5 = new WaitPanelThread(new Point(0, 10),   100, true, pnl5, Color.White, 4, semaphore5, semaphore6, buffer5, buffer6, buffer3);
         p6 = new WaitPanelThread(new Point(0, 10),   100, true, pnl6, Color.White, 4, semaphore6, semaphore7, buffer6, buffer7);
         p7 = new WaitPanelThread(new Point(10, 0),   100, true, pnl7, Color.White, 2, semaphore7, semaphore8, buffer7, buffer8);
         p8 = new WaitPanelThread(new Point(780, 10), 100, true, pnl8, Color.White, 3, semaphore8, semaphore9, buffer8, buffer9);
-        p9 = new WaitPanelThread(new Point(10, 260), 100, true, pnl9, Color.White, 1, semaphore9, semaphore4, semaphore1, buffer9, buffer4, buffer1);
+        p9 = new WaitPanelThread(new Point(10, 260), 100, true, pnl9, Color.White, 1, semaphore9, semaphore4, buffer9, buffer4, buffer1);
 
         ////Semaphore Thread Declarations
         //semThread1 = new Thread(new ThreadStart(semaphore4.Start));
@@ -524,6 +524,7 @@ public class ButtonPanelThread
                 if (hubOpen)
                 {
                     bufferThis.Read(ref this.colour);
+                    panel.Invalidate();
                 }
 
                 if (!hubOpen)
@@ -548,8 +549,9 @@ public class ButtonPanelThread
                 bufferNext.Write(this.colour);
                 bufferNext.WriteDestination(planeDestination);
                 colour = Color.Empty;
-                panel.Invalidate();
                 semaphoreThis.Signal();
+
+                panel.Invalidate();
             }
         }
     }
@@ -595,7 +597,6 @@ public class WaitPanelThread
     private int        direction;
     private Semaphore  semaphoreThis;
     private Semaphore  semaphoreNext;
-    private Semaphore  semaphoreNext2;
     private Buffer     bufferThis;
     private Buffer     bufferNext;
     private Buffer     bufferNext2;
@@ -658,7 +659,6 @@ public class WaitPanelThread
         this.bufferNext = bufferNext;
 
         bufferNext2 = null;
-        semaphoreNext2 = null;
     }
 
     public WaitPanelThread(Point origin,
@@ -669,7 +669,6 @@ public class WaitPanelThread
                            int direction,
                            Semaphore semaphoreThis,
                            Semaphore semaphoreNext,
-                           Semaphore semaphoreNext2,
                            Buffer bufferThis,
                            Buffer bufferNext,
                            Buffer bufferNext2)
@@ -713,7 +712,6 @@ public class WaitPanelThread
         this.direction = direction;
         this.semaphoreThis = semaphoreThis;
         this.semaphoreNext = semaphoreNext;
-        this.semaphoreNext = semaphoreNext2;
         this.bufferThis = bufferThis;
         this.bufferNext = bufferNext;
         this.bufferNext2 = bufferNext2;
@@ -725,12 +723,12 @@ public class WaitPanelThread
 
         while(sectionActive)
         {
+            this.zeroPlane();
+            bufferThis.Read(ref this.colour);
+            destination = bufferThis.ReadDestination();
+
             if (colour != Color.Empty)
             {
-                this.zeroPlane();
-                bufferThis.Read(ref this.colour);
-                panel.Invalidate();
-                destination = bufferThis.ReadDestination();
 
                 for (int i = 1; i <= planeMoves; i++)
                 {
@@ -741,10 +739,9 @@ public class WaitPanelThread
 
                 if (bufferNext2 != null && bufferThis.ReadDestination() == bufferNext2.ReadBufferIDNum())
                 {
-                    semaphoreNext.Wait();
-                    semaphoreThis.Signal();
                     bufferNext2.Write(this.colour);
                     bufferNext2.WriteDestination(destination);
+                    semaphoreThis.Signal();
                     panel.Invalidate();
                 }
                 else
@@ -752,7 +749,7 @@ public class WaitPanelThread
                     semaphoreNext.Wait();
                     bufferNext.Write(this.colour);
                     this.colour = Color.Empty;
-                    //bufferNext.WriteDestination(destination);
+                    bufferNext.WriteDestination(destination);
                     semaphoreThis.Signal();
                     panel.Invalidate();
                 }
